@@ -1,0 +1,22 @@
+name: Verify public GHCR image
+
+on:
+  push:
+    branches: ["http/localhost8080"]
+
+permissions: {}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run the public image
+        run: docker run -d -p 8080:80 ghcr.io/mahsa-mousavinia/code-smell-shop:1.0.0
+
+      - name: Verify storefront and product API
+        shell: bash
+        run: |
+          curl -fsS --retry 8 --retry-connrefused --retry-delay 2 --max-time 15 \
+            http://127.0.0.1:8080/ | grep -F 'id="root"'
+          curl -fsS --retry 3 --max-time 15 \
+            http://127.0.0.1:8080/api/products.json | jq -e 'arrays | length | select(. > 0)'
