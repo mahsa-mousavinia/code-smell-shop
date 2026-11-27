@@ -11,12 +11,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run the public image
-        run: docker run -d -p 8080:80 ghcr.io/mahsa-mousavinia/code-smell-shop:1.0.0
+        id: start
+        run: docker run -d --name ghcr-shop -p 8080:80 ghcr.io/mahsa-mousavinia/code-smell-shop:1.0.0
 
       - name: Verify storefront and product API
         shell: bash
         run: |
-          curl -fsS --retry 8 --retry-connrefused --retry-delay 2 --max-time 15 \
-            http://127.0.0.1:8080/ | grep -F 'id="root"'
-          curl -fsS --retry 3 --max-time 15 \
-            http://127.0.0.1:8080/api/products.json | jq -e 'arrays | length | select(. > 0)'
+          curl -fsS --retry 8 --retry-all-errors --retry-delay 2 --max-time 15 \
+            --output "$RUNNER_TEMP/ghcr-index.html" http://127.0.0.1:8080/
+          grep -F 'id="root"' "$RUNNER_TEMP/ghcr-index.html"
+
+          curl -fsS --retry 3 --retry-all-errors --retry-delay 2 --max-time 15 \
+            --output "$RUNNER_TEMP/ghcr-products.json" http://127.0.0.1:8080/api/products.json
+          jq -e 'arrays | length | select(. > 0)' "$RUNNER_TEMP/ghcr-products.json"
+
+      - name: Show container logs on failure
+        if: failure() && steps.start.outcome == 'success'
+        run: docker logs ghcr-shop
