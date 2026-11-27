@@ -1,1 +1,1 @@
-export const ciFailureDemo: number = "a"
+export const ciFailureDemo: number = 1
